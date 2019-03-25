@@ -1,0 +1,19 @@
+<core:FragmentDefinition
+   xmlns="sap.m"
+   xmlns:core="sap.ui.core">
+   <Dialog
+		id="VariedadeDialog"
+		title="{view>/titulo}"
+		class="sapUiSmallMargin">
+   	
+   		<VBox id="vBoxVariedade" class="sapUiSmallMargin">
+			<Label text="Descrição:" labelFor="descricao"/>
+			<Input value="{Descricao}" id="descricao" required="true"/>
+		</VBox>
+   		
+   		<buttons>
+   			<Button text="Salvar" press="onSaveDialog"/>
+   			<Button text="Fechar" press="onCloseDialog"/>
+   		</buttons>
+   </Dialog>
+</core:FragmentDefinition>
