@@ -4,11 +4,11 @@
    <Dialog
 		id="VariedadeDialog"
 		title="{view>/titulo}"
-		class="sapUiSmallMargin">
+		class="sapUiSmallMargin sapUiSizeCompact">
    	
    		<VBox id="vBoxVariedade" class="sapUiSmallMargin">
 			<Label text="Descrição:" labelFor="descricao"/>
-			<Input value="{Descricao}" id="descricao" required="true"/>
+			<Input value="{model>/Descricao}" id="descricao" required="true"/>
 		</VBox>
    		
    		<buttons>

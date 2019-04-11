@@ -1,45 +1,53 @@
 sap.ui.define([
 	"sap/ui/core/mvc/Controller",
-	"sap/m/MessageBox"
-], function(Controller, MessageBox) {
+	"sap/m/MessageBox",
+	"sap/ui/model/json/JSONModel",
+	"br/com/idxtecVariedade/services/Session"
+], function(Controller, MessageBox, JSONModel, Session) {
 	"use strict";
 
 	return Controller.extend("br.com.idxtecVariedade.controller.Variedade", {
 		onInit: function(){
+			var oJSONModel = new JSONModel();
+			
+			this._operacao = null;
+			this._sPath = null;
+
+			this.getOwnerComponent().setModel(oJSONModel, "model");
 			this.getView().addStyleClass(this.getOwnerComponent().getContentDensityClass());
 		},
 		
 		onRefresh: function(){
 			var oModel = this.getOwnerComponent().getModel();
-			
 			oModel.refresh(true);
+			this.getView().byId("tableVariedade").clearSelection();
 		},
 		
 		onIncluir: function(){
 			var oDialog = this._criarDialog();
-			var oModel = this.getOwnerComponent().getModel();
-			var oViewModel = this.getOwnerComponent().getModel("view");
+			var oTable = this.byId("tableVariedade");
+			var oJSONModel = this.getOwnerComponent().getModel("model");
+			var oViewModel = this.getModel("view");
 			
 			oViewModel.setData({
 				titulo: "Inserir Variedade",
 				msgSave: "Variedade inserida com sucesso!"
 			});
 			
-			oDialog.unbindElement();
-			oDialog.setEscapeHandler(function(oPromise){
-				if(oModel.hasPendingChanges()){
-					oModel.resetChanges();
-				}
-			});
+			this._operacao = "incluir";
 			
-			var oContext = oModel.createEntry("/Variedades", {
-				properties:{
-					"Id": 0,
-					"Descricao": ""
-				}
-			});
+			var oNovoVariedade = {
+				"Id": 0,
+				"Descricao": "",
+				"Empresa" : Session.get("EMPRESA_ID"),
+				"Usuario": Session.get("USUARIO_ID"),
+				"EmpresaDetails": { __metadata: { uri: "/Empresas(" + Session.get("EMPRESA_ID") + ")"}},
+				"UsuarioDetails": { __metadata: { uri: "/Usuarios(" + Session.get("USUARIO_ID") + ")"}}
+			};
 			
-			oDialog.setBindingContext(oContext);
+			oJSONModel.setData(oNovoVariedade);
+			
+			oTable.clearSelection();
 			oDialog.open();
 		},
 		
@@ -47,21 +55,32 @@ sap.ui.define([
 			var oDialog = this._criarDialog();
 			var oTable = this.byId("tableVariedade");
 			var nIndex = oTable.getSelectedIndex();
-			var oViewModel = this.getOwnerComponent().getModel("view");
+			var oModel = this.getOwnerComponent().getModel();
+			var oJSONModel = this.getOwnerComponent().getModel("model");
+			var oViewModel = this.getModel("view");
 			
 			oViewModel.setData({
 				titulo: "Editar Variedade",
 				msgSave: "Variedade alterada com sucesso!"
 			});
 			
+			this._operacao = "editar";
+			
 			if(nIndex === -1){
-				MessageBox.information("Selecione uma variedade da tabela!");
+				MessageBox.warning("Selecione uma variedade da tabela!");
 				return;
 			}
 			
 			var oContext = oTable.getContextByIndex(nIndex);
+			this._sPath = oContext.sPath;
 			
-			oDialog.bindElement(oContext.sPath);
+			oModel.read(oContext.sPath, {
+				success: function(oData){
+					oJSONModel.setData(oData);
+				}
+			});
+			
+			oTable.clearSelection();
 			oDialog.open();
 		},
 		
@@ -71,7 +90,7 @@ sap.ui.define([
 			var nIndex = oTable.getSelectedIndex();
 			
 			if(nIndex === -1){
-				MessageBox.information("Selecione uma variedade da tabela!");
+				MessageBox.warning("Selecione uma variedade da tabela!");
 				return;
 			}
 			
@@ -93,9 +112,6 @@ sap.ui.define([
 				success: function(){
 					oModel.refresh(true);
 					oTable.clearSelection();
-				},
-				error: function(oError){
-					MessageBox.error(oError.responseText);
 				}
 			});
 		},
@@ -113,26 +129,46 @@ sap.ui.define([
 		},
 		
 		onSaveDialog: function(){
-			var oView = this.getView();
-			var oModel = this.getOwnerComponent().getModel();
-			var oViewModel = this.getOwnerComponent().getModel("view");
-			
-			if(this._checarCampos(this.getView()) === true){
-				MessageBox.information("Preencha todos os campos obrigatórios!");
-				return; 
-			}else{
-				oModel.submitChanges({
-					success: function(){
-						oModel.refresh(true);
-						MessageBox.success(oViewModel.getData().msgSave);
-						oView.byId("VariedadeDialog").close();
-						oView.byId("tableVariedade").clearSelection();
-					},
-					error: function(oError){
-						MessageBox.error(oError.responseText);
-					}
-				});
+			if (this._checarCampos(this.getView())) {
+				MessageBox.warning("Preencha todos os campos obrigatórios!");
+				return;
 			}
+			if(this._operacao === "incluir"){
+				this._createVariedade();
+				this.getView().byId("VariedadeDialog").close();
+			} else if(this._operacao === "editar"){
+				this._updateVariedade();
+				this.getView().byId("VariedadeDialog").close();
+			} 
+		},
+		
+		_getDados: function(){
+			var oJSONModel = this.getOwnerComponent().getModel("model");
+			var oDados = oJSONModel.getData();
+			
+			return oDados;
+		},
+		
+		_createVariedade: function(){
+			var oModel = this.getOwnerComponent().getModel();
+	
+			oModel.create("/Variedades", this._getDados(), {
+				success: function() {
+					MessageBox.success("Variedade inserida com sucesso!");
+					oModel.refresh(true);
+				}
+			});
+		},
+		
+		_updateVariedade: function(){
+			var oModel = this.getOwnerComponent().getModel();
+			
+			oModel.update(this._sPath, this._getDados(), {
+				success: function(){
+					MessageBox.success("Variedade alterada com sucesso!");
+					oModel.refresh(true);
+				}
+			});
 		},
 		
 		onCloseDialog: function(){
@@ -151,6 +187,10 @@ sap.ui.define([
 			}else{
 				return false; 
 			}
+		},
+		
+		getModel: function(sModel) {
+			return this.getOwnerComponent().getModel(sModel);
 		}
 	});
 });
