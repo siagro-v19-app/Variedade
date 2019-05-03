@@ -18,19 +18,21 @@ sap.ui.define([
 			this.getOwnerComponent().setModel(oJSONModel, "model");
 			this.getView().addStyleClass(this.getOwnerComponent().getContentDensityClass());
 			
-			this.getModel().attachMetadataLoaded(function(){
-				var oFilter = new Filter("Empresa", FilterOperator.EQ, Session.get("EMPRESA_ID"));
-				var oView = this.getView();
-				var oTable = oView.byId("tableVariedade");
-				var oColumn = oView.byId("columnDescricao");
-				
-				oTable.sort(oColumn);
-				oView.byId("tableVariedade").getBinding("rows").filter(oFilter, "Application");
+			var oFilter = new Filter("Empresa", FilterOperator.EQ, Session.get("EMPRESA_ID"));
+			var oView = this.getView();
+			var oTable = oView.byId("tableVariedade");
+			
+			oTable.bindRows({
+				path: '/Variedades',
+				sorter: {
+					path: 'Descricao'
+				},
+				filters: oFilter
 			});
 		},
 		
 		filtraVariedade: function(oEvent){
-			var sQuery = oEvent.getParameter("query");
+			var sQuery = oEvent.getParameter("query").toUpperCase();
 			var oFilter1 = new Filter("Empresa", FilterOperator.EQ, Session.get("EMPRESA_ID"));
 			var oFilter2 = new Filter("Descricao", FilterOperator.Contains, sQuery);
 			
